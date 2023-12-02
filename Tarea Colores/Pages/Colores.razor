@@ -1,0 +1,111 @@
+﻿@page "/Colores"
+
+@using Tarea_Colores.Models;
+<h3>Colores</h3>
+
+@foreach (var color in colors)
+{
+    // get color index
+    var index = colors.IndexOf(color);
+    // make a new row every 5 inputs
+    if (index % 5 == 0)
+    {
+        <br />
+    }
+    <input class="@clasecss(color.Valor)" @bind="color.Valor" @oninput="contar" style="padding: 4px; margin: 2px;">
+}
+
+<div>
+    Rojo: @rojo
+    Verde: @verde
+    Azul: @azul
+</div>
+<button @onclick="SaveColorsToDatabase">Guardar</button>
+
+@code {
+    int rojo, verde, azul = 0;
+
+    List<ColorModel> colors;
+
+    void contar()
+    {
+        rojo = 0;
+        verde = 0;
+        azul = 0;
+
+        foreach (var color in colors)
+        {
+            color.Valor = color.Valor?.ToLower().Trim(); 
+            if (color.Valor.Contains("rojo"))
+            {
+                rojo++;
+            }
+            else if (color.Valor.Contains("verde"))
+            {
+                verde++;
+            }
+            else if (color.Valor.Contains("azul"))
+            {
+                azul++;
+            }
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+
+        using (var dbContext = new AppDbContext())
+        {
+            
+            for (int i = 0; i < 25; i++)
+            {
+                var color = dbContext.Colors.FirstOrDefault(c => c.Id == i + 1); 
+                if (color == null)
+                {
+                    dbContext.Colors.Add(new ColorModel { Valor = "" }); 
+                }
+            }
+
+            dbContext.SaveChanges();
+
+            colors = dbContext.Colors.ToList();
+            contar();
+        }
+    }
+
+    async Task SaveColorsToDatabase()
+    {
+        using (var dbContext = new AppDbContext())
+        {
+            
+            foreach (var color in colors)
+            {
+                var existingColor = dbContext.Colors.Find(color.Id);
+                if (existingColor != null)
+                {
+                    existingColor.Valor = color.Valor;
+                }
+            }
+
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
+    string clasecss(string color)
+    {
+        color = color?.ToLower().Trim() ?? "";
+        if (color.Contains("rojo"))
+        {
+            return "bg-danger";
+        }
+        else if (color.Contains("verde"))
+        {
+            return "bg-success";
+        }
+        else if (color.Contains("azul"))
+        {
+            return "bg-primary";
+        }
+        return "";
+    }
+}
